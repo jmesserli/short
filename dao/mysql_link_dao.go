@@ -18,13 +18,13 @@ func NewMySqlLinkDao(host, database, user, password string) LinkDAO {
 		log.Fatal(err)
 	}
 
-	return &MySqlLinkDao{db: db,}
+	return &MySqlLinkDao{db: db}
 }
 
 func (m MySqlLinkDao) Create(link model.Link) bool {
 	exists := m.Exists(link.Short)
 
-	_, err := m.db.Exec("insert into link values (?, ?) on duplicate key update `long` = ?", link.Short, link.Long, link.Long)
+	_, err := m.db.Exec("insert into link values (?, ?, ?) on duplicate key update `long` = ?, user = ?", link.Short, link.Long, link.User, link.Long, link.User)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -57,8 +57,8 @@ func (m MySqlLinkDao) Delete(short string) bool {
 }
 
 func (m MySqlLinkDao) Get(short string) (model.Link, error) {
-	var long string
-	err := m.db.QueryRow("select `long` from link where short = ?", short).Scan(&long)
+	var long, user string
+	err := m.db.QueryRow("select `long`, user from link where short = ?", short).Scan(&long, &user)
 	if err != nil {
 		return model.Link{}, err
 	}
@@ -66,6 +66,7 @@ func (m MySqlLinkDao) Get(short string) (model.Link, error) {
 	return model.Link{
 		Short: short,
 		Long:  long,
+		User:  user,
 	}, nil
 }
 

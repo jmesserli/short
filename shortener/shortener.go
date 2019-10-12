@@ -3,6 +3,7 @@ package shortener
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"io/ioutil"
 	"math/rand"
@@ -87,6 +88,8 @@ func (s Shortener) CreateLink(w http.ResponseWriter, r *http.Request) {
 		returnError(w, err, http.StatusBadRequest)
 		return
 	}
+
+	link.User = r.Context().Value("user").(*jwt.Token).Claims.(jwt.MapClaims)["preferred_username"].(string)
 
 	if len(link.Short) == 0 {
 		link.Short = s.generateUniqueLink()
