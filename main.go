@@ -101,7 +101,7 @@ func main() {
 
 	srv := &http.Server{
 		Handler:      n,
-		Addr:         "0.0.0.0:8080",
+		Addr:         os.Getenv("SHORT_LISTEN_ADDR"),
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
