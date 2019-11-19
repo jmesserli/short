@@ -123,7 +123,7 @@ func main() {
 	}))
 	n.UseHandler(r)
 
-	corsHeaders := handlers.AllowedHeaders([]string{"Authorization"})
+	corsHeaders := handlers.AllowedHeaders([]string{"Authorization", "Content-Type"})
 	corsOrigins := handlers.AllowedOrigins([]string{"*"})
 	corsMethods := handlers.AllowedMethods([]string{"OPTIONS", "GET", "POST", "DELETE"})
 
