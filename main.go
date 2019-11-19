@@ -6,6 +6,7 @@ import (
 	"fmt"
 	jwtmiddleware "github.com/auth0/go-jwt-middleware"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/urfave/negroni"
@@ -109,8 +110,12 @@ func main() {
 	}))
 	n.UseHandler(r)
 
+	corsHeaders := handlers.AllowedHeaders([]string{"*"})
+	corsOrigins := handlers.AllowedOrigins([]string{"*"})
+	corsMethods := handlers.AllowedMethods([]string{"OPTIONS", "GET", "POST", "DELETE"})
+
 	srv := &http.Server{
-		Handler:      n,
+		Handler:      handlers.CORS(corsHeaders, corsOrigins, corsMethods)(n),
 		Addr:         os.Getenv("SHORT_LISTEN_ADDR"),
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
