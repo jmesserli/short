@@ -14,6 +14,7 @@ import (
 	"os"
 	"peg.nu/short/dao"
 	"peg.nu/short/shortener"
+	"peg.nu/short/unsplash"
 	"strings"
 	"time"
 )
@@ -26,12 +27,21 @@ func main() {
 			os.Getenv("SHORT_DB_USER"),
 			os.Getenv("SHORT_DB_PASS")))
 
+	u := unsplash.New(
+		os.Getenv("SHORT_UNSPLASH_ACCESSKEY"),
+		os.Getenv("SHORT_DB_HOST"),
+		os.Getenv("SHORT_DB_DATABASE"),
+		os.Getenv("SHORT_DB_USER"),
+		os.Getenv("SHORT_DB_PASS"))
+
 	r := mux.NewRouter()
 
 	r.HandleFunc("/api/link", s.CreateLink).Methods("POST")
 	r.HandleFunc("/api/link/{link}", s.DeleteLink).Methods("DELETE")
+	r.HandleFunc("/api/unsplash/image", u.GetImage).Methods("GET")
 
 	r.HandleFunc("/{path}", s.RedirectShort).Methods("GET")
+	r.HandleFunc("/", http.RedirectHandler(os.Getenv("SHORT_UI_URL"), http.StatusFound).ServeHTTP).Methods("GET")
 
 	block, _ := pem.Decode([]byte(fmt.Sprintf("-----BEGIN PUBLIC KEY-----\n%v\n-----END PUBLIC KEY-----", os.Getenv("SHORT_JWT_PUBKEY"))))
 	if block == nil {
@@ -105,5 +115,6 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
+	log.Println("Starting server")
 	log.Fatal(srv.ListenAndServe())
 }

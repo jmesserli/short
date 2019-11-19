@@ -7,4 +7,19 @@ CREATE TABLE `link`
     UNIQUE KEY `short` (`short`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
+  COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE `unsplash_image`
+(
+    `id`                   int(11)                                 NOT NULL,
+    `url`                  varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `photographer_name`    varchar(50) COLLATE utf8mb4_unicode_ci  NOT NULL,
+    `photographer_profile` varchar(50) COLLATE utf8mb4_unicode_ci  NOT NULL,
+    `updated`              datetime                                NOT NULL,
+    PRIMARY KEY (`id`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci;
+
+INSERT INTO `unsplash_image` (`id`, `url`, `photographer_name`, `photographer_profile`, `updated`)
+VALUES (1, '', '', '', NOW());
