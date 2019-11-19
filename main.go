@@ -67,6 +67,7 @@ func main() {
 	n.Use(negroni.NewLogger())
 	n.Use(negroni.HandlerFunc(jwtMiddleware.HandlerWithNext))
 	n.Use(negroni.HandlerFunc(func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+		var needsLogin bool
 		var requiredRole string
 		if strings.HasPrefix(r.URL.Path, "/api/link") {
 			method := r.Method
@@ -76,10 +77,14 @@ func main() {
 			} else if method == http.MethodDelete {
 				requiredRole = "PegNu-Short.DELETE"
 			}
+
+			needsLogin = true
+		} else if strings.HasPrefix(r.URL.Path, "/api/unsplash") {
+			needsLogin = true
 		}
 
-		// short circuit if no authentication is required
-		if len(requiredRole) == 0 {
+		// short circuit if no login is required
+		if !needsLogin {
 			next(rw, r)
 			return
 		}
@@ -88,8 +93,16 @@ func main() {
 			rw.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-
 		token := r.Context().Value("user").(*jwt.Token)
+		rw.Header().Add("X-Short-Sub", token.Claims.(jwt.MapClaims)["sub"].(string))
+		rw.Header().Add("X-Short-User", token.Claims.(jwt.MapClaims)["preferred_username"].(string))
+
+		// short circuit if no role is required
+		if len(requiredRole) == 0 {
+			next(rw, r)
+			return
+		}
+
 		resAccess := token.Claims.(jwt.MapClaims)["resource_access"].(map[string]interface{})
 		roles := resAccess["short"].(map[string]interface{})["roles"].([]interface{})
 
@@ -110,7 +123,7 @@ func main() {
 	}))
 	n.UseHandler(r)
 
-	corsHeaders := handlers.AllowedHeaders([]string{"*"})
+	corsHeaders := handlers.AllowedHeaders([]string{"Authorization"})
 	corsOrigins := handlers.AllowedOrigins([]string{"*"})
 	corsMethods := handlers.AllowedMethods([]string{"OPTIONS", "GET", "POST", "DELETE"})
 
