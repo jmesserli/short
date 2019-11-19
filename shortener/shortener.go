@@ -12,6 +12,7 @@ import (
 	"peg.nu/short/dao"
 	"peg.nu/short/model"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -101,7 +102,7 @@ func (s Shortener) CreateLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = url.Parse(link.Long)
-	if err != nil {
+	if err != nil || len(strings.TrimSpace(link.Long)) == 0 {
 		returnError(w, err, http.StatusBadRequest)
 		return
 	}
