@@ -39,7 +39,9 @@ func main() {
 
 	r.HandleFunc("/api/link", s.CreateLink).Methods("POST")
 	r.HandleFunc("/api/link/{link}", s.DeleteLink).Methods("DELETE")
+
 	r.HandleFunc("/api/unsplash/image", u.GetImage).Methods("GET")
+	r.HandleFunc("/api/unsplash/clear", u.Clear).Methods("GET")
 
 	r.HandleFunc("/{path}", s.RedirectShort).Methods("GET")
 	r.HandleFunc("/", http.RedirectHandler(os.Getenv("SHORT_UI_URL"), http.StatusFound).ServeHTTP).Methods("GET")
@@ -80,6 +82,10 @@ func main() {
 
 			needsLogin = true
 		} else if strings.HasPrefix(r.URL.Path, "/api/unsplash") {
+			if strings.HasPrefix(r.URL.Path, "/api/unsplash/clear") {
+				requiredRole = "PegNu-Short.CLEAR-BACKGROUND"
+			}
+
 			needsLogin = true
 		}
 

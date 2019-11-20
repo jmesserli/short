@@ -63,6 +63,25 @@ func (u Unsplash) GetImage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (u Unsplash) Clear(w http.ResponseWriter, r *http.Request) {
+	u.updateDbImage(Image{
+		ImageUrl:             "",
+		PhotographerName:     "",
+		PhotographerUsername: "",
+	})
+
+	body, _ := json.Marshal(map[string]string{
+		"status": "ok",
+	})
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := w.Write(body)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func (u Unsplash) getImage() Image {
 	dbImg := u.getDbImage()
 
