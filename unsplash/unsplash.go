@@ -97,10 +97,9 @@ func (u Unsplash) getImage() Image {
 
 func (u Unsplash) queryRandomImage() Image {
 	photos, _, err := u.client.Photos.Random(&us.RandomPhotoOpt{
-		Featured:    true,
-		SearchQuery: "Nature",
-		Orientation: us.Landscape,
-		Count:       1,
+		Orientation:   us.Landscape,
+		Count:         1,
+		CollectionIDs: []int{573009},
 	})
 	if err != nil {
 		log.Fatal(err)
