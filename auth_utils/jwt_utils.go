@@ -75,11 +75,11 @@ func ParseToken(token *jwt.Token) *User {
 
 	for resource, resMap := range resourceAccess {
 		roleMap := resMap.(map[string]interface{})
-		roles := roleMap["roles"].(map[string]string)
+		roles := roleMap["roles"].([]interface{})
 		strRoles := make([]string, len(roles))
 
 		for _, role := range roles {
-			strRoles = append(strRoles, role)
+			strRoles = append(strRoles, role.(string))
 		}
 
 		rolesMap[resource] = strRoles
