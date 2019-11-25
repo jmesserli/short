@@ -8,6 +8,7 @@ import (
 	us "github.com/hbagdi/go-unsplash/unsplash"
 	"log"
 	"net/http"
+	"peg.nu/short/dao"
 	"time"
 )
 
@@ -33,10 +34,10 @@ type Unsplash struct {
 	db     *sql.DB
 }
 
-func New(accessKey, host, database, user, password string) Unsplash {
+func New(accessKey string, dbInfo dao.DbConnectionInfo) Unsplash {
 	hc := http.Client{Transport: authenticatingTransport{accessKey: accessKey}}
 
-	db, err := sql.Open("mysql", fmt.Sprintf("%v:%v@tcp(%v)/%v?parseTime=true", user, password, host, database))
+	db, err := dbInfo.OpenMySQL()
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -3,12 +3,12 @@ package shortener
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/url"
+	"peg.nu/short/auth_utils"
 	"peg.nu/short/dao"
 	"peg.nu/short/model"
 	"regexp"
@@ -90,7 +90,13 @@ func (s Shortener) CreateLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	link.User = r.Context().Value("user").(*jwt.Token).Claims.(jwt.MapClaims)["preferred_username"].(string)
+	user := auth_utils.GetUser(r).User
+	link.User = user.Username
+
+	if len(link.Short) > 0 && s.Dao.Exists(link.Short) && !user.HasRole("short", auth_utils.RoleOverwrite) {
+		returnError(w, fmt.Errorf("you don't have permisson to overwrite links"), http.StatusForbidden)
+		return
+	}
 
 	if len(link.Short) == 0 {
 		link.Short = s.generateUniqueLink()

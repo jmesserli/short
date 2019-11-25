@@ -13,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"peg.nu/short/auth_utils"
 	"peg.nu/short/dao"
 	"peg.nu/short/shortener"
 	"peg.nu/short/unsplash"
@@ -21,19 +22,16 @@ import (
 )
 
 func main() {
-	s := shortener.NewShortener(
-		dao.NewMySqlLinkDao(
-			os.Getenv("SHORT_DB_HOST"),
-			os.Getenv("SHORT_DB_DATABASE"),
-			os.Getenv("SHORT_DB_USER"),
-			os.Getenv("SHORT_DB_PASS")))
+	dbInfo := dao.DbConnectionInfo{
+		Host:     os.Getenv("SHORT_DB_HOST"),
+		Database: os.Getenv("SHORT_DB_DATABASE"),
+		User:     os.Getenv("SHORT_DB_USER"),
+		Password: os.Getenv("SHORT_DB_PASS"),
+	}
 
-	u := unsplash.New(
-		os.Getenv("SHORT_UNSPLASH_ACCESSKEY"),
-		os.Getenv("SHORT_DB_HOST"),
-		os.Getenv("SHORT_DB_DATABASE"),
-		os.Getenv("SHORT_DB_USER"),
-		os.Getenv("SHORT_DB_PASS"))
+	s := shortener.NewShortener(dao.NewMySqlLinkDao(dbInfo))
+
+	u := unsplash.New(os.Getenv("SHORT_UNSPLASH_ACCESSKEY"), dbInfo)
 
 	r := mux.NewRouter()
 
@@ -70,20 +68,20 @@ func main() {
 	n.Use(negroni.HandlerFunc(jwtMiddleware.HandlerWithNext))
 	n.Use(negroni.HandlerFunc(func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 		var needsLogin bool
-		var requiredRole string
+		var requiredRoles []auth_utils.ShortRole
 		if strings.HasPrefix(r.URL.Path, "/api/link") {
 			method := r.Method
 
 			if method == http.MethodPost {
-				requiredRole = "PegNu-Short.CREATE"
+				requiredRoles = append(requiredRoles, auth_utils.RoleCreate)
 			} else if method == http.MethodDelete {
-				requiredRole = "PegNu-Short.DELETE"
+				requiredRoles = append(requiredRoles, auth_utils.RoleDelete)
 			}
 
 			needsLogin = true
 		} else if strings.HasPrefix(r.URL.Path, "/api/unsplash") {
 			if strings.HasPrefix(r.URL.Path, "/api/unsplash/clear") {
-				requiredRole = "PegNu-Short.CLEAR-BACKGROUND"
+				requiredRoles = append(requiredRoles, auth_utils.RoleClearBackground)
 			}
 
 			needsLogin = true
@@ -99,28 +97,18 @@ func main() {
 			rw.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		token := r.Context().Value("user").(*jwt.Token)
-		rw.Header().Add("X-Short-Sub", token.Claims.(jwt.MapClaims)["sub"].(string))
-		rw.Header().Add("X-Short-User", token.Claims.(jwt.MapClaims)["preferred_username"].(string))
+
+		user := auth_utils.GetUser(r).User
+		rw.Header().Add("X-Short-Sub", user.Id)
+		rw.Header().Add("X-Short-User", user.Username)
 
 		// short circuit if no role is required
-		if len(requiredRole) == 0 {
+		if len(requiredRoles) == 0 {
 			next(rw, r)
 			return
 		}
 
-		resAccess := token.Claims.(jwt.MapClaims)["resource_access"].(map[string]interface{})
-		roles := resAccess["short"].(map[string]interface{})["roles"].([]interface{})
-
-		roleFound := false
-		for _, role := range roles {
-			if role.(string) == requiredRole {
-				roleFound = true
-				break
-			}
-		}
-
-		if !roleFound {
+		if !user.HasRoles("short", requiredRoles) {
 			rw.WriteHeader(http.StatusForbidden)
 			return
 		}

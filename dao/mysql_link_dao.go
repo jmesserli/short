@@ -2,7 +2,6 @@ package dao
 
 import (
 	"database/sql"
-	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"log"
 	"peg.nu/short/model"
@@ -12,8 +11,8 @@ type MySqlLinkDao struct {
 	db *sql.DB
 }
 
-func NewMySqlLinkDao(host, database, user, password string) LinkDAO {
-	db, err := sql.Open("mysql", fmt.Sprintf("%v:%v@tcp(%v)/%v", user, password, host, database))
+func NewMySqlLinkDao(dbInfo DbConnectionInfo) LinkDAO {
+	db, err := dbInfo.OpenMySQL()
 	if err != nil {
 		log.Fatal(err)
 	}
