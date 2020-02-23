@@ -76,6 +76,32 @@ func (s Shortener) generateUniqueLink() string {
 
 var shortRegex = regexp.MustCompile("^[a-zA-Z0-9][a-zA-Z0-9_\\-]{0,62}[a-zA-Z0-9]$")
 
+func (s Shortener) LinkExists(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	exists := s.Dao.Exists(vars["link"])
+	if !exists {
+		returnJson(w, http.StatusOK, map[string]interface{}{
+			"status": "ok",
+			"exists": false,
+		})
+		return
+	}
+
+	link, err := s.Dao.Get(vars["link"])
+	if err != nil {
+		returnError(w, err, 500)
+		return
+	}
+
+	returnJson(w, http.StatusOK, map[string]interface{}{
+		"status": "ok",
+		"exists": true,
+		"url":    link.Long,
+		"user":   link.User,
+	})
+}
+
 func (s Shortener) CreateLink(w http.ResponseWriter, r *http.Request) {
 	bodyBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {

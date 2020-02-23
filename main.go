@@ -37,6 +37,7 @@ func main() {
 
 	r.HandleFunc("/api/link", s.CreateLink).Methods("POST")
 	r.HandleFunc("/api/link/{link}", s.DeleteLink).Methods("DELETE")
+	r.HandleFunc("/api/link/{link}/exists", s.LinkExists).Methods("GET")
 
 	r.HandleFunc("/api/unsplash/image", u.GetImage).Methods("GET")
 	r.HandleFunc("/api/unsplash/clear", u.Clear).Methods("GET")
@@ -72,7 +73,7 @@ func main() {
 		if strings.HasPrefix(r.URL.Path, "/api/link") {
 			method := r.Method
 
-			if method == http.MethodPost {
+			if method == http.MethodPost || method == http.MethodGet {
 				requiredRoles = append(requiredRoles, auth_utils.RoleCreate)
 			} else if method == http.MethodDelete {
 				requiredRoles = append(requiredRoles, auth_utils.RoleDelete)
