@@ -22,11 +22,14 @@ func (at authenticatingTransport) RoundTrip(req *http.Request) (*http.Response, 
 	return http.DefaultTransport.RoundTrip(req)
 }
 
+const expiration = 12 * time.Hour
+
 type Image struct {
-	ImageUrl             string    `json:"image_url"`
-	PhotographerName     string    `json:"photographer_name"`
-	PhotographerUsername string    `json:"photographer_username"`
-	Updated              time.Time `json:"-"`
+	ImageUrl             string        `json:"image_url"`
+	PhotographerName     string        `json:"photographer_name"`
+	PhotographerUsername string        `json:"photographer_username"`
+	Updated              time.Time     `json:"updated_at"`
+	ExpirationDuration   time.Duration `json:"expiration_duration"`
 }
 
 type Unsplash struct {
@@ -86,7 +89,7 @@ func (u Unsplash) Clear(w http.ResponseWriter, r *http.Request) {
 func (u Unsplash) getImage() Image {
 	dbImg := u.getDbImage()
 
-	if dbImg.ImageUrl != "" && dbImg.Updated.Add(12*time.Hour).After(time.Now()) {
+	if dbImg.ImageUrl != "" && dbImg.Updated.Add(expiration).After(time.Now()) {
 		return dbImg
 	}
 
@@ -112,6 +115,7 @@ func (u Unsplash) queryRandomImage() Image {
 		PhotographerName:     *photo.Photographer.Name,
 		PhotographerUsername: *photo.Photographer.Username,
 		Updated:              time.Now(),
+		ExpirationDuration:   expiration,
 	}
 }
 
@@ -122,6 +126,8 @@ func (u Unsplash) getDbImage() Image {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	img.ExpirationDuration = expiration
 
 	return img
 }
