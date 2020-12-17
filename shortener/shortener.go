@@ -198,3 +198,18 @@ func (s Shortener) RedirectShort(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("x-short-user", link.UserId)
 	w.WriteHeader(http.StatusFound)
 }
+
+func (s Shortener) UserLinks(w http.ResponseWriter, r *http.Request) {
+	user := auth_utils.GetUser(r).User
+
+	links, err := s.Dao.GetUserLinks(user.Id)
+	if err != nil {
+		returnError(w, fmt.Errorf("failed to retrieve user links"), http.StatusInternalServerError)
+		return
+	}
+
+	returnJson(w, http.StatusOK, map[string]interface{}{
+		"status": "ok",
+		"links":  links,
+	})
+}

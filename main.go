@@ -38,6 +38,7 @@ func main() {
 	r.HandleFunc("/api/link", s.CreateLink).Methods("POST")
 	r.HandleFunc("/api/link/{link}", s.DeleteLink).Methods("DELETE")
 	r.HandleFunc("/api/link/{link}/exists", s.LinkExists).Methods("GET")
+	r.HandleFunc("/api/user/links", s.UserLinks).Methods("GET")
 
 	r.HandleFunc("/api/unsplash/image", u.GetImage).Methods("GET")
 	r.HandleFunc("/api/unsplash/clear", u.Clear).Methods("GET")
@@ -83,6 +84,8 @@ func main() {
 				requiredRoles = append(requiredRoles, auth_utils.RoleClearBackground)
 			}
 
+			needsLogin = true
+		} else if strings.HasPrefix(r.URL.Path, "/api/user") {
 			needsLogin = true
 		}
 
