@@ -51,7 +51,7 @@ func NewShortener(dao dao.LinkDAO) *Shortener {
 	}
 }
 
-var generateChars = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+var generateChars = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.")
 
 func (s Shortener) generateUniqueLink() string {
 	length := 6
