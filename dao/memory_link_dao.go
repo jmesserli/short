@@ -6,16 +6,16 @@ import (
 )
 
 type MemoryLinkDao struct {
-	mapping map[string]string
+	mapping map[string]model.Link
 }
 
 func NewMemoryLinkDao() LinkDAO {
-	return &MemoryLinkDao{mapping: map[string]string{}}
+	return &MemoryLinkDao{mapping: map[string]model.Link{}}
 }
 
 func (m *MemoryLinkDao) Create(link model.Link) bool {
 	existed := m.Exists(link.Short)
-	m.mapping[link.Short] = link.Long
+	m.mapping[link.Short] = link
 
 	return existed
 }
@@ -32,16 +32,27 @@ func (m *MemoryLinkDao) Delete(short string) bool {
 }
 
 func (m *MemoryLinkDao) Get(short string) (model.Link, error) {
-	long, ok := m.mapping[short]
+	link, ok := m.mapping[short]
 
 	if !ok {
 		return model.Link{}, fmt.Errorf("unknown link")
 	}
 
-	return model.Link{
-		Short: short,
-		Long:  long,
-	}, nil
+	return link, nil
+}
+
+func (m *MemoryLinkDao) GetUserLinks(user string) ([]model.Link, error) {
+	var links []model.Link
+
+	for _, link := range m.mapping {
+		if link.UserId != user {
+			continue
+		}
+
+		links = append(links, link)
+	}
+
+	return links, nil
 }
 
 func (m *MemoryLinkDao) Close() {}

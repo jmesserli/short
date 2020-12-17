@@ -98,7 +98,7 @@ func (s Shortener) LinkExists(w http.ResponseWriter, r *http.Request) {
 		"status": "ok",
 		"exists": true,
 		"url":    link.Long,
-		"user":   link.User,
+		"user":   link.UserId,
 	})
 }
 
@@ -117,7 +117,7 @@ func (s Shortener) CreateLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := auth_utils.GetUser(r).User
-	link.User = user.Username
+	link.UserId = user.Username
 
 	if len(link.Short) > 0 && s.Dao.Exists(link.Short) && !user.HasRole("short", auth_utils.RoleOverwrite) {
 		returnError(w, fmt.Errorf("you don't have permisson to overwrite links"), http.StatusForbidden)

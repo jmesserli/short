@@ -7,6 +7,7 @@ type LinkDAO interface {
 	Exists(short string) bool
 	Delete(short string) bool
 	Get(short string) (model.Link, error)
+	GetUserLinks(user string) ([]model.Link, error)
 
 	Close()
 }
