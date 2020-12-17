@@ -75,8 +75,6 @@ func main() {
 
 			if method == http.MethodPost || method == http.MethodGet {
 				requiredRoles = append(requiredRoles, auth_utils.RoleCreate)
-			} else if method == http.MethodDelete {
-				requiredRoles = append(requiredRoles, auth_utils.RoleDelete)
 			}
 
 			needsLogin = true

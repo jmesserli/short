@@ -95,10 +95,11 @@ func (s Shortener) LinkExists(w http.ResponseWriter, r *http.Request) {
 	}
 
 	returnJson(w, http.StatusOK, map[string]interface{}{
-		"status": "ok",
-		"exists": true,
-		"url":    link.Long,
-		"user":   link.UserId,
+		"status":    "ok",
+		"exists":    true,
+		"url":       link.Long,
+		"user":      link.UserId,
+		"user_name": link.UserName,
 	})
 }
 
@@ -117,11 +118,15 @@ func (s Shortener) CreateLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := auth_utils.GetUser(r).User
-	link.UserId = user.Username
+	link.UserId = user.Id
+	link.UserName = user.Username
 
 	if len(link.Short) > 0 && s.Dao.Exists(link.Short) && !user.HasRole("short", auth_utils.RoleOverwrite) {
-		returnError(w, fmt.Errorf("you don't have permisson to overwrite links"), http.StatusForbidden)
-		return
+		savedLink, _ := s.Dao.Get(link.Short)
+		if savedLink.UserId != user.Id {
+			returnError(w, fmt.Errorf("you don't have permisson to overwrite links"), http.StatusForbidden)
+			return
+		}
 	}
 
 	if len(link.Short) == 0 {
@@ -148,8 +153,30 @@ func (s Shortener) CreateLink(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Shortener) DeleteLink(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	s.Dao.Delete(vars["link"])
+	short := mux.Vars(r)["link"]
+
+	if !s.Dao.Exists(short) {
+		returnJson(w, http.StatusNotFound, map[string]string{
+			"status": "not_found",
+		})
+		return
+	}
+
+	user := auth_utils.GetUser(r).User
+	userCanDeleteGlobal := user.HasRole("short", auth_utils.RoleDelete)
+
+	link, err := s.Dao.Get(short)
+	if err != nil {
+		returnError(w, fmt.Errorf("failed retrieving link"), http.StatusInternalServerError)
+		return
+	}
+
+	if link.UserId != user.Id && !userCanDeleteGlobal {
+		returnError(w, fmt.Errorf("you are not authorized to delete other user's links"), http.StatusForbidden)
+		return
+	}
+
+	s.Dao.Delete(short)
 
 	returnJson(w, http.StatusOK, map[string]string{
 		"status": "ok",
@@ -168,5 +195,6 @@ func (s Shortener) RedirectShort(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Location", link.Long)
 	w.Header().Set("x-short-link", link.Short)
+	w.Header().Set("x-short-user", link.UserId)
 	w.WriteHeader(http.StatusFound)
 }
