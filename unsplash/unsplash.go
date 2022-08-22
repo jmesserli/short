@@ -1,7 +1,6 @@
 package unsplash
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
@@ -9,6 +8,8 @@ import (
 	"log"
 	"net/http"
 	"peg.nu/short/dao"
+	"peg.nu/short/global"
+	"peg.nu/short/model"
 	"time"
 )
 
@@ -22,32 +23,17 @@ func (at authenticatingTransport) RoundTrip(req *http.Request) (*http.Response, 
 	return http.DefaultTransport.RoundTrip(req)
 }
 
-const expiration = 12 * time.Hour
-
-type Image struct {
-	ImageUrl             string        `json:"image_url"`
-	PhotographerName     string        `json:"photographer_name"`
-	PhotographerUsername string        `json:"photographer_username"`
-	Updated              time.Time     `json:"updated_at"`
-	ExpirationDuration   time.Duration `json:"expiration_duration"`
-}
-
 type Unsplash struct {
 	client *us.Unsplash
-	db     *sql.DB
+	dao    dao.UnsplashDAO
 }
 
-func New(accessKey string, dbInfo dao.DbConnectionInfo) Unsplash {
+func New(accessKey string, dao dao.UnsplashDAO) Unsplash {
 	hc := http.Client{Transport: authenticatingTransport{accessKey: accessKey}}
-
-	db, err := dbInfo.OpenMySQL()
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	return Unsplash{
 		client: us.New(&hc),
-		db:     db,
+		dao:    dao,
 	}
 }
 
@@ -68,11 +54,14 @@ func (u Unsplash) GetImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u Unsplash) Clear(w http.ResponseWriter, r *http.Request) {
-	u.updateDbImage(Image{
+	err, _ := u.dao.Update(model.Image{
 		ImageUrl:             "",
 		PhotographerName:     "",
 		PhotographerUsername: "",
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	body, _ := json.Marshal(map[string]string{
 		"status": "ok",
@@ -80,26 +69,32 @@ func (u Unsplash) Clear(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
-	_, err := w.Write(body)
+	_, err = w.Write(body)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (u Unsplash) getImage() Image {
-	dbImg := u.getDbImage()
+func (u Unsplash) getImage() model.Image {
+	err, dbImg := u.dao.Get()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	if dbImg.ImageUrl != "" && dbImg.Updated.Add(expiration).After(time.Now()) {
-		return dbImg
+	if dbImg.ImageUrl != "" && dbImg.Updated.Add(global.Expiration).After(time.Now()) {
+		return *dbImg
 	}
 
 	image := u.queryRandomImage()
-	u.updateDbImage(image)
+	err, _ = u.dao.Update(image)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	return image
 }
 
-func (u Unsplash) queryRandomImage() Image {
+func (u Unsplash) queryRandomImage() model.Image {
 	photos, _, err := u.client.Photos.Random(&us.RandomPhotoOpt{
 		Orientation:   us.Landscape,
 		Count:         1,
@@ -110,38 +105,11 @@ func (u Unsplash) queryRandomImage() Image {
 	}
 
 	photo := (*photos)[0]
-	return Image{
+	return model.Image{
 		ImageUrl:             photo.Urls.Full.String(),
 		PhotographerName:     *photo.Photographer.Name,
 		PhotographerUsername: *photo.Photographer.Username,
 		Updated:              time.Now(),
-		ExpirationDuration:   expiration,
+		ExpirationDuration:   global.Expiration,
 	}
-}
-
-func (u Unsplash) getDbImage() Image {
-	img := Image{}
-
-	err := u.db.QueryRow("select url, photographer_name, photographer_profile, updated from unsplash_image where id = ?", 1).Scan(&img.ImageUrl, &img.PhotographerName, &img.PhotographerUsername, &img.Updated)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	img.ExpirationDuration = expiration
-
-	return img
-}
-
-func (u Unsplash) updateDbImage(img Image) bool {
-	res, err := u.db.Exec("update unsplash_image set url = ?, photographer_name = ?, photographer_profile = ?, updated = NOW() where id = ?", img.ImageUrl, img.PhotographerName, img.PhotographerUsername, 1)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	rows, err := res.RowsAffected()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return rows > 0
 }

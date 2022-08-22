@@ -30,8 +30,10 @@ func main() {
 	}
 
 	s := shortener.NewShortener(dao.NewMySqlLinkDao(dbInfo))
+	//s := shortener.NewShortener(dao.NewMemoryLinkDao())
 
-	u := unsplash.New(os.Getenv("SHORT_UNSPLASH_ACCESSKEY"), dbInfo)
+	u := unsplash.New(os.Getenv("SHORT_UNSPLASH_ACCESSKEY"), dao.NewMysqlUnsplashDao(dbInfo))
+	//u := unsplash.New(os.Getenv("SHORT_UNSPLASH_ACCESSKEY"), dao.NewMemoryUnsplashDao())
 
 	r := mux.NewRouter()
 
@@ -110,7 +112,7 @@ func main() {
 			return
 		}
 
-		if !user.HasRoles("short", requiredRoles) {
+		if !user.HasRoles("pegnu-short", requiredRoles) {
 			rw.WriteHeader(http.StatusForbidden)
 			return
 		}
